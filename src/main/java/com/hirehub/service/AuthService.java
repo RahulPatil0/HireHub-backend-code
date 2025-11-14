@@ -23,18 +23,21 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .build();
-        userRepository.save(user); //SAVED
+        userRepository.save(user); // SAVED
+
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return new JwtResponse(token); //token generated
+        return new JwtResponse(token, user.getRole().name()); // ✅ pass both token and role
     }
 
     public JwtResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
+
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return new JwtResponse(token);
+        return new JwtResponse(token, user.getRole().name()); // ✅ pass both token and role
     }
 }
