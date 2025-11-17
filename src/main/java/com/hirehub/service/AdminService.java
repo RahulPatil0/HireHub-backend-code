@@ -29,4 +29,6 @@ public interface AdminService {
     AdminJobResponse approveJob(Long jobId);
     AdminJobResponse rejectJob(Long jobId);
     AdminJobResponse deleteJob(Long jobId);
+    List<AdminJobResponse> getJobsByOwner(Long ownerId);
+
 }

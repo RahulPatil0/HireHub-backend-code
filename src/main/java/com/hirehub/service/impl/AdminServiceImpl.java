@@ -90,36 +90,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     // -----------------------------
-    // (LEGACY METHODS)
-    // Keeping for backward compatibility — can delete later
-    // -----------------------------
-    @Override
-    public AdminUserResponse approveUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        user.setActive(true);
-        userRepository.save(user);
-        return AdminMapper.toAdminUser(user);
-    }
-
-    @Override
-    public AdminUserResponse blockUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        user.setActive(false);
-        userRepository.save(user);
-        return AdminMapper.toAdminUser(user);
-    }
-
-    @Override
-    public AdminUserResponse deleteUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        userRepository.delete(user);
-        return AdminMapper.toAdminUser(user);
-    }
-
-    // -----------------------------
     // JOB MANAGEMENT
     // -----------------------------
     @Override
@@ -154,5 +124,52 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new EntityNotFoundException("Job not found"));
         jobRepository.delete(job);
         return AdminMapper.toAdminJob(job);
+    }
+
+    // ✅ NEW: View all jobs posted by a specific owner
+    @Override
+    public List<AdminJobResponse> getJobsByOwner(Long ownerId) {
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+
+        if (!owner.getRole().equals(Role.OWNER)) {
+            throw new IllegalStateException("User is not an owner");
+        }
+
+        List<Job> jobs = jobRepository.findByOwner(owner);
+
+        return jobs.stream()
+                .map(AdminMapper::toAdminJob)
+                .toList();
+    }
+
+    // -----------------------------
+    // (LEGACY METHODS)
+    // Keeping for backward compatibility — can delete later
+    // -----------------------------
+    @Override
+    public AdminUserResponse approveUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        user.setActive(true);
+        userRepository.save(user);
+        return AdminMapper.toAdminUser(user);
+    }
+
+    @Override
+    public AdminUserResponse blockUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        user.setActive(false);
+        userRepository.save(user);
+        return AdminMapper.toAdminUser(user);
+    }
+
+    @Override
+    public AdminUserResponse deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        userRepository.delete(user);
+        return AdminMapper.toAdminUser(user);
     }
 }

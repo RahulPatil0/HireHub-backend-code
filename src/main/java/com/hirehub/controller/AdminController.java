@@ -48,6 +48,12 @@ public class AdminController {
         return adminService.deleteUser(type, id);
     }
 
+    // ✅ New: View all jobs posted by a particular owner
+    @GetMapping("/owners/{ownerId}/jobs")
+    public List<AdminJobResponse> getJobsByOwner(@PathVariable Long ownerId) {
+        return adminService.getJobsByOwner(ownerId);
+    }
+
     // ---------------------------
     // JOB MANAGEMENT
     // ---------------------------

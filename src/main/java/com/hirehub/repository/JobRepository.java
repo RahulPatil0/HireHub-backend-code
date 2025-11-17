@@ -2,6 +2,7 @@ package com.hirehub.repository;
 
 import com.hirehub.model.Job;
 import com.hirehub.model.JobStatus;
+import com.hirehub.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -13,4 +14,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     List<Job> findByOwnerId(Long ownerId);
 
     List<Job> findByStatus(JobStatus status);
+
+    List<Job> findByOwner(User owner);
+
 }
