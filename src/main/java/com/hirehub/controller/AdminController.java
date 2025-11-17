@@ -1,58 +1,74 @@
 package com.hirehub.controller;
 
-import com.hirehub.model.User;
+import com.hirehub.dto.AdminJobResponse;
+import com.hirehub.dto.AdminUserResponse;
 import com.hirehub.service.AdminService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/admin")
+@RequiredArgsConstructor
 public class AdminController {
 
     private final AdminService adminService;
 
-    public AdminController(AdminService adminService) {
-        this.adminService = adminService;
-    }
+    // ---------------------------
+    // USER MANAGEMENT
+    // ---------------------------
 
     @GetMapping("/workers")
-    public List<User> getWorkers() {
+    public List<AdminUserResponse> getAllWorkers() {
         return adminService.getAllWorkers();
     }
 
-    @PostMapping("/workers/{id}/activate")
-    public String activateWorker(@PathVariable Long id) {
-        return adminService.activateWorker(id);
-    }
-
-    @PostMapping("/workers/{id}/deactivate")
-    public String deactivateWorker(@PathVariable Long id) {
-        return adminService.deactivateWorker(id);
-    }
-
-    @DeleteMapping("/workers/{id}")
-    public String deleteWorker(@PathVariable Long id) {
-        return adminService.deleteWorker(id);
-    }
-
     @GetMapping("/owners")
-    public List<User> getOwners() {
+    public List<AdminUserResponse> getAllOwners() {
         return adminService.getAllOwners();
     }
 
-    @PostMapping("/owners/{id}/block")
-    public String blockOwner(@PathVariable Long id) {
-        return adminService.blockOwner(id);
+    // ✅ Activate user (maps frontend "Activate" button)
+    @PostMapping("/{type}/{id}/activate")
+    public AdminUserResponse activateUser(@PathVariable String type, @PathVariable Long id) {
+        return adminService.activateUser(type, id);
     }
 
-    @PostMapping("/owners/{id}/unblock")
-    public String unblockOwner(@PathVariable Long id) {
-        return adminService.unblockOwner(id);
+    // ✅ Deactivate user (maps frontend "Deactivate" button)
+    @PostMapping("/{type}/{id}/deactivate")
+    public AdminUserResponse deactivateUser(@PathVariable String type, @PathVariable Long id) {
+        return adminService.deactivateUser(type, id);
     }
 
-    @DeleteMapping("/owners/{id}")
-    public String deleteOwner(@PathVariable Long id) {
-        return adminService.deleteOwner(id);
+    // ✅ Delete user (matches frontend Delete)
+    @DeleteMapping("/{type}/{id}")
+    public AdminUserResponse deleteUser(@PathVariable String type, @PathVariable Long id) {
+        return adminService.deleteUser(type, id);
+    }
+
+    // ---------------------------
+    // JOB MANAGEMENT
+    // ---------------------------
+
+    @GetMapping("/jobs")
+    public List<AdminJobResponse> getAllJobs() {
+        return adminService.getAllJobs();
+    }
+
+    @PostMapping("/jobs/{id}/approve")
+    public AdminJobResponse approveJob(@PathVariable Long id) {
+        return adminService.approveJob(id);
+    }
+
+    @PostMapping("/jobs/{id}/reject")
+    public AdminJobResponse rejectJob(@PathVariable Long id) {
+        return adminService.rejectJob(id);
+    }
+
+    @DeleteMapping("/jobs/{id}")
+    public AdminJobResponse deleteJob(@PathVariable Long id) {
+        return adminService.deleteJob(id);
     }
 }

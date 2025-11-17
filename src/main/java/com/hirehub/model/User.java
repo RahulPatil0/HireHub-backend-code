@@ -1,36 +1,15 @@
-//package com.hirehub.model;
-//
-//import jakarta.persistence.*;
-//import lombok.*;
-//
-//@Entity
-//@Data
-//@Builder
-//@NoArgsConstructor
-//@AllArgsConstructor
-//@Table(name = "users")
-//public class User {
-//    @Id
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
-//    private Long id;
-//
-//    private String username;
-//    private String email;
-//    private String password;
-//    private boolean active;
-//
-//    @Enumerated(EnumType.STRING)
-//    private Role role;
-//}
 package com.hirehub.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,12 +23,17 @@ public class User {
     // -----------------------------------
     // BASIC USER DETAILS
     // -----------------------------------
+    @Column(nullable = false)
     private String username;
 
+    @Column(nullable = false, unique = true)
     private String email;
 
-    private String phone; // recommended for worker contact
+    private String phone;
 
+    // ✅ Hide password from responses, but still accept during registration
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(nullable = false)
     private String password;
 
     private boolean active = true;
@@ -58,14 +42,30 @@ public class User {
     private Role role; // OWNER, WORKER, ADMIN
 
     // -----------------------------------
-    // JOBS POSTED BY OWNER
+    // JOB RELATIONS
     // -----------------------------------
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
+    // ✅ OWNER → JOBS (One owner can post many jobs)
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore // prevents recursion & lazy loading exception
     private List<Job> postedJobs = new ArrayList<>();
 
-    // -----------------------------------
-    // JOBS ASSIGNED TO WORKER
-    // -----------------------------------
-    @ManyToMany(mappedBy = "workers")
+    // ✅ WORKER ↔ JOBS (Many-to-Many)
+    @ManyToMany(mappedBy = "workers", fetch = FetchType.LAZY)
+    @JsonIgnore // prevents circular reference
     private List<Job> assignedJobs = new ArrayList<>();
+
+    // -----------------------------------
+    // UTILITY METHODS
+    // -----------------------------------
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                ", phone='" + phone + '\'' +
+                ", active=" + active +
+                ", role=" + role +
+                '}';
+    }
 }

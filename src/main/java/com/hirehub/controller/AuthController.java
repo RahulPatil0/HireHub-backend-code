@@ -1,6 +1,8 @@
 package com.hirehub.controller;
 
-import com.hirehub.dto.*;
+import com.hirehub.dto.JwtResponse;
+import com.hirehub.dto.RegisterRequest;
+import com.hirehub.dto.LoginRequest;
 import com.hirehub.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
     private final AuthService authService;
 
     @PostMapping("/register")
