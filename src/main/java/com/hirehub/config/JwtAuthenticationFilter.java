@@ -1,18 +1,21 @@
 package com.hirehub.config;
 
 import com.hirehub.repository.UserRepository;
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -29,7 +32,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // Skip if missing or invalid
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -38,22 +40,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = authHeader.substring(7);
         String userEmail = jwtService.extractEmail(jwt);
 
-        // Authenticate user if not yet authenticated
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
             userRepository.findByEmail(userEmail).ifPresent(user -> {
 
-                if (jwtService.isTokenValid(jwt)) {
-                    List<String> roles = jwtService.extractAuthorities(jwt);
-                    List<SimpleGrantedAuthority> authorities = roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .toList();
+                if (!jwtService.isTokenValid(jwt)) return;
 
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(user, null, authorities);
+                List<String> roles = jwtService.extractAuthorities(jwt);
 
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
+                List<SimpleGrantedAuthority> authorities = roles.stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
+
+                UserDetails userDetails = org.springframework.security.core.userdetails.User
+                        .withUsername(user.getEmail())
+                        .password(user.getPassword())
+                        .authorities(authorities)
+                        .build();
+
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                authorities
+                        );
+
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                SecurityContextHolder.getContext().setAuthentication(authToken);
             });
         }
 

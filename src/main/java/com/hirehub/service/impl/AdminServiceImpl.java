@@ -3,7 +3,10 @@ package com.hirehub.service.impl;
 import com.hirehub.dto.AdminJobResponse;
 import com.hirehub.dto.AdminUserResponse;
 import com.hirehub.mapper.AdminMapper;
-import com.hirehub.model.*;
+import com.hirehub.model.Job;
+import com.hirehub.model.JobStatus;
+import com.hirehub.model.Role;
+import com.hirehub.model.User;
 import com.hirehub.repository.JobRepository;
 import com.hirehub.repository.UserRepository;
 import com.hirehub.service.AdminService;
@@ -12,19 +15,21 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional // ✅ Prevents LazyInitializationException
+@Transactional
 public class AdminServiceImpl implements AdminService {
 
     private final UserRepository userRepository;
     private final JobRepository jobRepository;
 
-    // -----------------------------
+    // ============================
     // USER MANAGEMENT
-    // -----------------------------
+    // ============================
 
     @Override
     public List<AdminUserResponse> getAllWorkers() {
@@ -42,7 +47,6 @@ public class AdminServiceImpl implements AdminService {
                 .toList();
     }
 
-    // ✅ Unified activate/deactivate/delete methods (used by frontend)
     @Override
     public AdminUserResponse activateUser(String type, Long userId) {
         return updateUserStatus(type, userId, true);
@@ -60,7 +64,6 @@ public class AdminServiceImpl implements AdminService {
         return AdminMapper.toAdminUser(user);
     }
 
-    // ✅ Internal helper — reuses logic for workers & owners
     private AdminUserResponse updateUserStatus(String type, Long userId, boolean active) {
         User user = findUserByTypeAndId(type, userId);
         user.setActive(active);
@@ -68,9 +71,9 @@ public class AdminServiceImpl implements AdminService {
         return AdminMapper.toAdminUser(user);
     }
 
-    // ✅ Helper to safely locate user type (worker or owner)
     private User findUserByTypeAndId(String type, Long userId) {
         Role expectedRole;
+
         if ("workers".equalsIgnoreCase(type)) {
             expectedRole = Role.WORKER;
         } else if ("owners".equalsIgnoreCase(type)) {
@@ -89,9 +92,23 @@ public class AdminServiceImpl implements AdminService {
         return user;
     }
 
-    // -----------------------------
+    // ============================
+    // PENDING USERS
+    // ============================
+
+    @Override
+    public List<AdminUserResponse> getPendingUsers() {
+        return userRepository.findByDocumentsVerifiedFalse()
+                .stream()
+                .filter(user -> user.getRole() == Role.WORKER || user.getRole() == Role.OWNER)
+                .map(AdminMapper::toAdminUser)
+                .toList();
+    }
+
+    // ============================
     // JOB MANAGEMENT
-    // -----------------------------
+    // ============================
+
     @Override
     public List<AdminJobResponse> getAllJobs() {
         return jobRepository.findAll()
@@ -104,7 +121,7 @@ public class AdminServiceImpl implements AdminService {
     public AdminJobResponse approveJob(Long jobId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new EntityNotFoundException("Job not found"));
-        job.setStatus(JobStatus.OPEN); // ✅ Or APPROVED depending on your enum
+        job.setStatus(JobStatus.OPEN);
         jobRepository.save(job);
         return AdminMapper.toAdminJob(job);
     }
@@ -113,7 +130,7 @@ public class AdminServiceImpl implements AdminService {
     public AdminJobResponse rejectJob(Long jobId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new EntityNotFoundException("Job not found"));
-        job.setStatus(JobStatus.CANCELLED); // ✅ Or REJECTED depending on enum
+        job.setStatus(JobStatus.CANCELLED);
         jobRepository.save(job);
         return AdminMapper.toAdminJob(job);
     }
@@ -126,7 +143,10 @@ public class AdminServiceImpl implements AdminService {
         return AdminMapper.toAdminJob(job);
     }
 
-    // ✅ NEW: View all jobs posted by a specific owner
+    // ============================
+    // OWNER → JOB LIST
+    // ============================
+
     @Override
     public List<AdminJobResponse> getJobsByOwner(Long ownerId) {
         User owner = userRepository.findById(ownerId)
@@ -136,22 +156,67 @@ public class AdminServiceImpl implements AdminService {
             throw new IllegalStateException("User is not an owner");
         }
 
-        List<Job> jobs = jobRepository.findByOwner(owner);
-
-        return jobs.stream()
+        return jobRepository.findByOwner(owner)
+                .stream()
                 .map(AdminMapper::toAdminJob)
                 .toList();
     }
 
-    // -----------------------------
-    // (LEGACY METHODS)
-    // Keeping for backward compatibility — can delete later
-    // -----------------------------
+    // ============================
+    // DOCUMENT VERIFICATION
+    // ============================
+
+    @Override
+    public Map<String, Object> getUserDocuments(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Map<String, Object> documents = new HashMap<>();
+        documents.put("verified", user.isDocumentsVerified());
+
+        user.getDocuments().forEach(doc -> {
+            documents.put(doc.getType().toLowerCase(), doc.getUrl());
+        });
+
+        return documents;
+    }
+
+    @Override
+    public void approveUserDocuments(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // ✅ This is the main "admin approved" action:
+        user.setDocumentsVerified(true);
+        user.setActive(true);  // allow login
+
+        // We are intentionally not using the `approved` field anymore (legacy)
+        userRepository.save(user);
+    }
+
+    @Override
+    public void rejectUserDocuments(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        user.setDocumentsVerified(false);
+        user.setActive(false); // block login
+        userRepository.save(user);
+    }
+
+    // ============================
+    // LEGACY COMPATIBILITY
+    // ============================
+
     @Override
     public AdminUserResponse approveUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // ✅ For legacy calls: treat as full approval
         user.setActive(true);
+        user.setDocumentsVerified(true);
+
         userRepository.save(user);
         return AdminMapper.toAdminUser(user);
     }
@@ -160,7 +225,8 @@ public class AdminServiceImpl implements AdminService {
     public AdminUserResponse blockUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        user.setActive(false);
+
+        user.setActive(false); // block login
         userRepository.save(user);
         return AdminMapper.toAdminUser(user);
     }
@@ -169,6 +235,7 @@ public class AdminServiceImpl implements AdminService {
     public AdminUserResponse deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
         userRepository.delete(user);
         return AdminMapper.toAdminUser(user);
     }

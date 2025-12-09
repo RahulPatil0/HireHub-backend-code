@@ -25,25 +25,39 @@ public class JobMapper {
     public static JobResponse toJobResponse(Job job) {
         JobResponse res = new JobResponse();
 
+        // 🔹 Basic job data
         res.setId(job.getId());
+        res.setTitle(job.getTitle());
+        res.setDescription(job.getDescription());
         res.setSkillType(job.getSkillType());
+        res.setJobType(job.getJobType());
+        res.setUrgency(job.getUrgency());
+
+        // 🔹 Worker & time info
         res.setRequiredWorkers(job.getRequiredWorkers());
         res.setDuration(job.getDuration());
         res.setDate(job.getDate());
         res.setStartTime(job.getStartTime());
         res.setBudgetPerWorker(job.getBudgetPerWorker());
         res.setNotes(job.getNotes());
+
+        // 🔹 Location
         res.setAddress(job.getAddress());
+        res.setCity(job.getCity());
+        res.setState(job.getState());
+        res.setPincode(job.getPincode());
         res.setLatitude(job.getLatitude());
         res.setLongitude(job.getLongitude());
+
+        // 🔹 Status + timestamps
         res.setStatus(job.getStatus().name());
         res.setCreatedAt(job.getCreatedAt());
         res.setUpdatedAt(job.getUpdatedAt());
 
-        // Owner
+        // 🔹 Owner (Single Object)
         res.setOwner(toUserResponse(job.getOwner()));
 
-        // Workers
+        // 🔹 Worker List (DTOs)
         List<UserResponse> workerList =
                 job.getWorkers() == null ? new ArrayList<>() :
                         job.getWorkers().stream()

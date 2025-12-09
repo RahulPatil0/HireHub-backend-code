@@ -14,19 +14,34 @@ import java.util.List;
 @NoArgsConstructor
 public class JobResponse {
     private Long id;
+
+    // High-level job info
+    private String title;
+    private String description;
     private String skillType;
+    private String jobType;
+    private String urgency;
+
+    // Workers / money / timing
     private int requiredWorkers;
     private String duration;
     private LocalDate date;
     private LocalTime startTime;
     private double budgetPerWorker;
     private String notes;
+
+    // Location
     private String address;
-    private double latitude;
-    private double longitude;
+    private String city;
+    private String state;
+    private String pincode;
+    private Double latitude;
+    private Double longitude;
+
+    // Status & relations
     private String status;
     private UserResponse owner;
-    private List<UserResponse> workers; // can be empty list
+    private List<UserResponse> workers;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

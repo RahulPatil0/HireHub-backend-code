@@ -20,9 +20,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // -----------------------------------
-    // BASIC USER DETAILS
-    // -----------------------------------
     @Column(nullable = false)
     private String username;
 
@@ -31,32 +28,50 @@ public class User {
 
     private String phone;
 
-    // ✅ Hide password from responses, but still accept during registration
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean approved = false;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean active = false;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean documentsVerified = false;
+
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 
-    private boolean active = true;
-
     @Enumerated(EnumType.STRING)
-    private Role role; // OWNER, WORKER, ADMIN
+    private Role role;
 
-    // -----------------------------------
-    // JOB RELATIONS
-    // -----------------------------------
-    // ✅ OWNER → JOBS (One owner can post many jobs)
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
+
+    @Column(columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean locationEnabled = false;
+
+    @Column
+    private String skill;
+
+    private String aadhaarUrl;
+    private String panUrl;
+    private String profilePhotoUrl;
+    private String address;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Document> documents = new ArrayList<>();
+
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore // prevents recursion & lazy loading exception
+    @JsonIgnore
     private List<Job> postedJobs = new ArrayList<>();
 
-    // ✅ WORKER ↔ JOBS (Many-to-Many)
     @ManyToMany(mappedBy = "workers", fetch = FetchType.LAZY)
-    @JsonIgnore // prevents circular reference
+    @JsonIgnore
     private List<Job> assignedJobs = new ArrayList<>();
 
-    // -----------------------------------
-    // UTILITY METHODS
-    // -----------------------------------
     @Override
     public String toString() {
         return "User{" +
@@ -64,8 +79,12 @@ public class User {
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
                 ", phone='" + phone + '\'' +
+                ", approved=" + approved +
                 ", active=" + active +
+                ", documentsVerified=" + documentsVerified +
                 ", role=" + role +
+                ", latitude=" + latitude +
+                ", longitude=" + longitude +
                 '}';
     }
 }

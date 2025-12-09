@@ -7,15 +7,27 @@ import java.time.LocalTime;
 @Data
 public class CreateJobRequest {
 
+    private String title;
+    private String description;
     private String skillType;
+    private String jobType;
+    private String urgency;
+
     private int requiredWorkers;
     private String duration;
-    private LocalDate date;
+
+    private LocalDate startDate;   // from frontend
     private LocalTime startTime;
-    private double budgetPerWorker;
+
+    private Double budgetPerWorker;
     private String notes;
 
+    // Location fields
     private String address;
-    private double latitude;
-    private double longitude;
+    private String city;
+    private String state;
+    private String pincode;
+
+    private Double latitude;
+    private Double longitude;
 }

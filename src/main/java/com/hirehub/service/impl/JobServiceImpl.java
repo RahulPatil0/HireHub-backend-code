@@ -5,6 +5,7 @@ import com.hirehub.model.*;
 import com.hirehub.repository.JobRepository;
 import com.hirehub.repository.UserRepository;
 import com.hirehub.service.JobService;
+import com.hirehub.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     public Job createJob(CreateJobRequest request, Long ownerId) {
@@ -26,22 +28,75 @@ public class JobServiceImpl implements JobService {
             throw new RuntimeException("User is not an owner");
         }
 
+        // 🚀 Direct field mapping (no request.getLocation())
         Job job = Job.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
                 .skillType(request.getSkillType())
+                .jobType(request.getJobType())
+                .urgency(request.getUrgency())
+
                 .requiredWorkers(request.getRequiredWorkers())
                 .duration(request.getDuration())
-                .date(request.getDate())
+                .date(request.getStartDate())
                 .startTime(request.getStartTime())
+
                 .budgetPerWorker(request.getBudgetPerWorker())
                 .notes(request.getNotes())
+
+                // 🟢 Direct mapping from request
                 .address(request.getAddress())
+                .city(request.getCity())
+                .state(request.getState())
+                .pincode(request.getPincode())
+
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+
                 .owner(owner)
                 .status(JobStatus.OPEN)
                 .build();
 
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+
+        sendNearbyWorkerNotifications(savedJob);
+
+        return savedJob;
+    }
+
+    // Worker Notification System
+    private void sendNearbyWorkerNotifications(Job job) {
+        if (job.getLatitude() == null || job.getLongitude() == null) {
+            System.out.println("⚠ No coordinates provided. Skipping notification.");
+            return;
+        }
+
+        List<User> workers = userRepository.findByRole(Role.WORKER);
+
+        List<User> nearbyWorkers = workers.stream()
+                .filter(w -> w.getLatitude() != null && w.getLongitude() != null)
+                .filter(w -> {
+                    double distance = distanceKm(
+                            job.getLatitude(), job.getLongitude(),
+                            w.getLatitude(), w.getLongitude()
+                    );
+                    return distance <= 10;
+                })
+                .toList();
+
+        if (!nearbyWorkers.isEmpty()) {
+            notificationService.notifyNearbyWorkers(nearbyWorkers, job);
+        }
+    }
+
+    private double distanceKm(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     @Override

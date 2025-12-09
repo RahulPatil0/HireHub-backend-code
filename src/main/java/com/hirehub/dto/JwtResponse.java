@@ -1,11 +1,16 @@
 package com.hirehub.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
+@Builder
 public class JwtResponse {
     private String token;
+    private Long userId;
+    private String username;
+    private String email;
     private String role;
 }

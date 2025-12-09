@@ -10,12 +10,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    public JwtResponse register(@RequestBody RegisterRequest request) {
+    @PostMapping(value = "/register", consumes = "multipart/form-data")
+    public JwtResponse register(@ModelAttribute RegisterRequest request) {
         return authService.register(request);
     }
 

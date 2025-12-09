@@ -1,7 +1,8 @@
 package com.hirehub.dto;
 
-import com.hirehub.model.User;
 import lombok.*;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -16,18 +17,11 @@ public class AdminUserResponse {
     private boolean active;
     private String role;
 
-    public static AdminUserResponse fromEntity(User user) {
-        if (user == null) {
-            return null;
-        }
+    private String aadhaarUrl;
+    private String panUrl;
+    private String profilePhotoUrl;
 
-        return AdminUserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .active(user.isActive())
-                .role(user.getRole() != null ? user.getRole().name() : "UNKNOWN")
-                .build();
-    }
+    // NEW → list of documents (dynamic)
+    private List<Map<String, String>> documents;
+
 }

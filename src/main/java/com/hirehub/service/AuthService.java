@@ -1,52 +1,12 @@
-//package com.hirehub.service;
-//
-//import com.hirehub.dto.*;
-//import com.hirehub.model.*;
-//import com.hirehub.repository.UserRepository;
-//import com.hirehub.config.JwtService;
-//import lombok.RequiredArgsConstructor;
-//import org.springframework.security.crypto.password.PasswordEncoder;
-//import org.springframework.stereotype.Service;
-//
-//@Service
-//@RequiredArgsConstructor
-//public class AuthService {
-//
-//    private final UserRepository userRepository;
-//    private final PasswordEncoder passwordEncoder;
-//    private final JwtService jwtService;
-//
-//    public JwtResponse register(RegisterRequest request) {
-//        User user = User.builder()
-//                .username(request.getUsername())
-//                .email(request.getEmail())
-//                .password(passwordEncoder.encode(request.getPassword()))
-//                .role(request.getRole())
-//                .build();
-//        userRepository.save(user); // SAVED
-//
-//        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-//        return new JwtResponse(token, user.getRole().name()); // ✅ pass both token and role
-//    }
-//
-//    public JwtResponse login(LoginRequest request) {
-//        User user = userRepository.findByEmail(request.getEmail())
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-//            throw new RuntimeException("Invalid credentials");
-//        }
-//
-//        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-//        return new JwtResponse(token, user.getRole().name()); // ✅ pass both token and role
-//    }
-//}
 package com.hirehub.service;
 
-import com.hirehub.dto.*;
-import com.hirehub.model.*;
-import com.hirehub.repository.UserRepository;
 import com.hirehub.config.JwtService;
+import com.hirehub.dto.JwtResponse;
+import com.hirehub.dto.LoginRequest;
+import com.hirehub.dto.RegisterRequest;
+import com.hirehub.model.Role;
+import com.hirehub.model.User;
+import com.hirehub.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -59,41 +19,71 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    // ============================
-    // REGISTER
-    // ============================
+    // ========================= REGISTER =========================
     public JwtResponse register(RegisterRequest request) {
 
         User user = User.builder()
                 .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .phone(request.getPhone())          // ✅ SAVING PHONE
+                .email(request.getEmail()
+                        .replaceAll("\\s", "")
+                        .replaceAll("\\u200B", "")
+                        .toLowerCase())
+                .phone(request.getPhone())
+                .password(passwordEncoder.encode(request.getPassword())) // ❗ DO NOT TRIM PASSWORD
                 .role(request.getRole())
-                .active(true)                      // ✅ Activate user by default
+                .approved(false)
+                .active(false)
+                .documentsVerified(false)
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtService.generateToken(savedUser.getEmail(), savedUser.getRole().name());
 
-        return new JwtResponse(token, user.getRole().name());
+        return JwtResponse.builder()
+                .token(token)
+                .userId(savedUser.getId())
+                .username(savedUser.getUsername())
+                .email(savedUser.getEmail())
+                .role(savedUser.getRole().name())
+                .build();
     }
 
-    // ============================
-    // LOGIN
-    // ============================
+    // ========================= LOGIN (ADMIN / OWNER / WORKER) =========================
     public JwtResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        String cleanEmail = request.getEmail()
+                .replaceAll("\\s", "")
+                .replaceAll("\\u200B", "")
+                .toLowerCase();
 
+        Role requestedRole = request.getRole();
+        if (requestedRole == null) {
+            throw new RuntimeException("Role is required");
+        }
+
+        // STEP 1 — find user by email
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        // STEP 2 — ensure selected role matches stored role
+        if (user.getRole() != requestedRole) {
+            throw new RuntimeException("Invalid email or role");
+        }
+
+        // STEP 3 — verify password (NO CLEANING)
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new RuntimeException("Invalid email or password");
         }
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
 
-        return new JwtResponse(token, user.getRole().name());
+        return JwtResponse.builder()
+                .token(token)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .build();
     }
 }

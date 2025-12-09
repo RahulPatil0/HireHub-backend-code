@@ -11,11 +11,9 @@ import java.util.*;
 @Service
 public class JwtService {
 
-    // ✅ Use ONE constant secret. Must be 32+ characters for HS256
     private static final String SECRET_KEY = "hirehub_backend_secret_key_2025_jwt_secure_token";
 
     private SecretKey getSigningKey() {
-        // Always use same encoding to avoid mismatch
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -24,7 +22,7 @@ public class JwtService {
                 .setSubject(email)
                 .claim("authorities", Collections.singletonList("ROLE_" + role))
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 24 hours
+                .setExpiration(new Date(System.currentTimeMillis() + 86400000))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
